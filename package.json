@@ -1,6 +1,6 @@
 {
-  "name": "ai-music-sheets",
-  "version": "0.1.0",
+  "name": "@mcptoolshop/ai-music-sheets",
+  "version": "1.0.0",
   "description": "Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from",
   "type": "module",
   "main": "dist/index.js",
@@ -11,6 +11,12 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "logo.svg"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -28,6 +34,13 @@
     "midi"
   ],
   "author": "mcp-tool-shop",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcp-tool-shop-org/ai-music-sheets.git"
+  },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.3.0",

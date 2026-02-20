@@ -1,6 +1,16 @@
-# ai-music-sheets
+<p align="center">
+  <strong>English</strong> | <a href="README.ja.md">日本語</a> | <a href="README.zh.md">中文</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.hi.md">हिन्दी</a> | <a href="README.it.md">Italiano</a> | <a href="README.pt-BR.md">Português</a>
+</p>
 
-Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from.
+<p align="center">
+  <img src="logo.svg" alt="PianoAI logo" width="180" />
+</p>
+
+<h1 align="center">ai-music-sheets</h1>
+
+<p align="center">
+  Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from.
+</p>
 
 [![Tests](https://img.shields.io/badge/tests-34_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 [![Songs](https://img.shields.io/badge/songs-10-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
@@ -16,6 +26,12 @@ A TypeScript library of piano songs in a three-layer hybrid format:
 
 An LLM can read the `musicalLanguage` block to explain a song to a student, then use the `measures` array to drive MIDI playback or generate exercises.
 
+## Install
+
+```bash
+npm install @mcptoolshop/ai-music-sheets
+```
+
 ## Quick Start
 
 ```typescript
@@ -24,7 +40,7 @@ import {
   searchSongs,
   getSong,
   getStats,
-} from "ai-music-sheets";
+} from "@mcptoolshop/ai-music-sheets";
 
 // Get stats
 const stats = getStats();
