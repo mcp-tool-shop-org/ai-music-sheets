@@ -145,7 +145,7 @@ registerSongs(songs: SongEntry[]): void
 
 ## Related
 
-- **[pianai](https://github.com/mcp-tool-shop-org/pianai)** — MCP server + CLI that loads this library, plays songs through VMPK via MIDI, and provides a living teaching experience with voice feedback.
+- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — MCP server + CLI that loads this library, plays songs through VMPK via MIDI, and provides a living teaching experience with voice feedback.
 
 ## Development
 
