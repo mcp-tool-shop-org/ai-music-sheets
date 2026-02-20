@@ -43,7 +43,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "midi-file": "^1.2.4"
+    "midi-file": "^1.2.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
