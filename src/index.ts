@@ -41,3 +41,15 @@ export {
   registerSongs,
   validateSong,
 } from "./registry/index.js";
+
+// Re-export MIDI ingest pipeline
+export { midiToSongEntry, midiNoteToScientific } from "./midi/ingest.js";
+
+// Re-export config schema + validation
+export {
+  SongConfigSchema,
+  MusicalLanguageSchema,
+  MeasureOverrideSchema,
+  validateConfig,
+} from "./config/schema.js";
+export type { SongConfig, MeasureOverride, ConfigError } from "./config/schema.js";
