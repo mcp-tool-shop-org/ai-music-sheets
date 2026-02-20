@@ -1,0 +1,37 @@
+{
+  "name": "ai-music-sheets",
+  "version": "0.1.0",
+  "description": "Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "registry:validate": "node --import tsx src/registry/validate-cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "piano",
+    "sheet-music",
+    "llm",
+    "mcp",
+    "music",
+    "teaching",
+    "midi"
+  ],
+  "author": "mcp-tool-shop",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7",
+    "vitest": "^3.0",
+    "tsx": "^4.19"
+  }
+}
