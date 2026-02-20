@@ -42,6 +42,9 @@
     "url": "https://github.com/mcp-tool-shop-org/ai-music-sheets.git"
   },
   "license": "MIT",
+  "dependencies": {
+    "midi-file": "^1.2.4"
+  },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "tsx": "^4.19",
