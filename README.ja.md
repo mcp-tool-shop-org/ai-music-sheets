@@ -3,17 +3,18 @@
 </p>
 
 <p align="center">
-  <img src="logo.svg" alt="PianoAI ロゴ" width="180" />
+  <img src="logo.svg" alt="ai-music-sheets ロゴ" width="180" />
 </p>
 
 <h1 align="center">ai-music-sheets</h1>
 
 <p align="center">
-  ピアノ楽譜をハイブリッド JSON + 音楽言語フォーマットで提供 — LLM が読み取り、推論し、教育に活用できるように設計されています。
+  ピアノ楽譜をハイブリッド JSON + 音楽言語フォーマットで提供 — LLM が読み取り、推論し、教育に活用できるように設計されています。<br/>
+  MIDI 取り込みパイプライン搭載：<code>.mid</code> ファイルを配置してコンフィグを書くだけで、完全な SongEntry が生成されます。
 </p>
 
-[![Tests](https://img.shields.io/badge/tests-34_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
-[![Songs](https://img.shields.io/badge/songs-10-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Tests](https://img.shields.io/badge/tests-113_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Songs](https://img.shields.io/badge/songs-10_built--in-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 [![Genres](https://img.shields.io/badge/genres-10-purple)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 
 ## これは何ですか？
@@ -25,6 +26,17 @@
 3. **コード対応** — MIDI 再生や分析のための小節ごとの音符データ
 
 LLM は `musicalLanguage` ブロックを読んで生徒に楽曲を説明し、`measures` 配列を使って MIDI 再生や練習問題の生成を行うことができます。
+
+### MIDI 取り込みパイプライン
+
+ライブラリの拡張が簡単になりました：
+
+1. `.mid` ファイルを `songs/raw/` に配置する
+2. `songs/config/` に短い JSON コンフィグを書く（メタデータ + 音楽言語）
+3. `pnpm build:songs` を実行する
+4. コンバーターが音符の抽出、小節の分割、手のパートの分離、和音の検出を行い、完全な `SongEntry` を生成する
+
+MIDI ファイルが音符とタイミングの正しい情報源です。人間が書くのは高価値な LLM レイヤーのみです。
 
 ## インストール
 
@@ -58,6 +70,24 @@ const arpeggioSongs = searchSongs({ query: "arpeggios" });
 
 // フィルターの組み合わせ
 const easyBlues = searchSongs({ genre: "blues", difficulty: "beginner" });
+```
+
+### MIDI → SongEntry 変換
+
+```typescript
+import { readFileSync } from "node:fs";
+import { midiToSongEntry, SongConfigSchema } from "@mcptoolshop/ai-music-sheets";
+
+// MIDI ファイルを読み込む
+const midi = new Uint8Array(readFileSync("songs/raw/autumn-leaves.mid"));
+
+// コンフィグを読み込んでバリデーション
+const rawConfig = JSON.parse(readFileSync("songs/config/autumn-leaves.json", "utf8"));
+const config = SongConfigSchema.parse(rawConfig);
+
+// 変換
+const entry = midiToSongEntry(midi, config);
+console.log(`${entry.title}: ${entry.measures.length} measures`);
 ```
 
 ## 楽曲ライブラリ（10曲、10ジャンル）
@@ -118,13 +148,16 @@ interface SongEntry {
 | 記号 | 音価 | 例 |
 |------|------|-----|
 | `:w` | 全音符 | `C4:w` |
+| `:h.` | 付点2分音符 | `E4:h.` |
 | `:h` | 2分音符 | `E4:h` |
+| `:q.` | 付点4分音符 | `G4:q.` |
 | `:q` | 4分音符 | `G4:q` |
+| `:e.` | 付点8分音符 | `A4:e.` |
 | `:e` | 8分音符 | `A4:e` |
 | `:s` | 16分音符 | `B4:s` |
 | `R` | 休符 | `R:h` |
 
-和音はスペース区切りです：`"C4:q E4:q G4:q"`
+和音はスペース区切りです：`"C4 E4 G4:q"`
 
 ## レジストリ API
 
@@ -152,24 +185,94 @@ registerSong(song: SongEntry): void
 registerSongs(songs: SongEntry[]): void
 ```
 
+## MIDI 取り込み API
+
+```typescript
+// MIDI バッファ + コンフィグ → SongEntry に変換
+midiToSongEntry(midiBuffer: Uint8Array, config: SongConfig): SongEntry
+
+// MIDI ノート番号 → 科学的音高表記に変換
+midiNoteToScientific(noteNumber: number): string
+// 60 → "C4", 69 → "A4", 108 → "C8"
+
+// 楽曲コンフィグをバリデーション
+validateConfig(config: unknown): ConfigError[]
+
+// ランタイムバリデーション用 Zod スキーマ
+SongConfigSchema    // 楽曲コンフィグ全体
+MusicalLanguageSchema
+MeasureOverrideSchema
+```
+
 ## 楽曲の追加方法
 
-1. `src/songs/<genre>/<slug>.ts` を作成
-2. `SongEntry` オブジェクトをエクスポート
-3. `src/songs/index.ts` にインポートして追加
+### MIDI から（推奨）
+
+1. `.mid` ファイルを `songs/raw/<slug>.mid` に配置する
+2. `songs/config/<slug>.json` にコンフィグを書く：
+
+```json
+{
+  "id": "autumn-leaves",
+  "title": "Autumn Leaves",
+  "genre": "jazz",
+  "composer": "Joseph Kosma",
+  "difficulty": "intermediate",
+  "key": "G major",
+  "tags": ["jazz-standard", "chord-changes"],
+  "musicalLanguage": {
+    "description": "The quintessential jazz standard...",
+    "structure": "AABA",
+    "keyMoments": ["m1: Opening ii-V-I progression"],
+    "teachingGoals": ["Learn ii-V-I voice leading"],
+    "styleTips": ["Swing eighths, gentle touch"]
+  }
+}
+```
+
+3. `pnpm build:songs` を実行 — `songs/generated/` に TypeScript が生成されます
 4. `pnpm test` を実行 — バリデーションが不正なデータを自動検出します
+
+### 手動（レガシー）
+
+1. `src/songs/<genre>/<slug>.ts` を作成する
+2. `SongEntry` オブジェクトをエクスポートする
+3. `src/songs/index.ts` にインポートして追加する
+4. `pnpm test` を実行する
+
+## アーキテクチャ
+
+```
+songs/
+├── raw/              .mid ファイル（音符の正しい情報源）
+├── config/           .json コンフィグ（人間が作成するメタデータ）
+└── generated/        .ts ファイル（自動生成された SongEntry オブジェクト）
+
+src/
+├── config/
+│   └── schema.ts     Zod スキーマ + バリデーション
+├── midi/
+│   └── ingest.ts     MIDI → SongEntry コンバーター
+├── registry/
+│   └── index.ts      楽曲の検索・検索・バリデーション
+├── songs/
+│   └── *.ts          10曲の組み込みデモ楽曲
+├── types.ts          コア型定義（SongEntry、Measure など）
+└── index.ts          バレルエクスポート
+```
 
 ## 関連プロジェクト
 
-- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — このライブラリを読み込み、MIDI 経由で VMPK を通じて楽曲を再生し、音声フィードバックによるライブ教育体験を提供する MCP サーバー + CLI。
+- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — 組み込みオーディオエンジン搭載のピアノプレイヤー。このライブラリを読み込み、スピーカーで楽曲を再生し、歌声とライブ教育フィードバックを提供する MCP サーバー + CLI。
 
 ## 開発
 
 ```bash
 pnpm install
-pnpm test          # 34 テスト
+pnpm test          # 113 テスト
 pnpm typecheck     # tsc --noEmit
 pnpm build         # dist/ にコンパイル
+pnpm build:songs   # MIDI → SongEntry ジェネレーター
 ```
 
 ## ライセンス

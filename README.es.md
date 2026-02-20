@@ -3,17 +3,18 @@
 </p>
 
 <p align="center">
-  <img src="logo.svg" alt="PianoAI logo" width="180" />
+  <img src="logo.svg" alt="ai-music-sheets logo" width="180" />
 </p>
 
 <h1 align="center">ai-music-sheets</h1>
 
 <p align="center">
-  Partituras de piano en formato híbrido JSON + lenguaje musical — diseñadas para que los LLM las lean, razonen y enseñen a partir de ellas.
+  Partituras de piano en formato híbrido JSON + lenguaje musical — diseñadas para que los LLM las lean, razonen y enseñen a partir de ellas.<br/>
+  Ahora con un pipeline de ingesta MIDI: coloca un archivo <code>.mid</code> y escribe una configuración → obtén una SongEntry completa.
 </p>
 
-[![Tests](https://img.shields.io/badge/tests-34_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
-[![Songs](https://img.shields.io/badge/songs-10-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Tests](https://img.shields.io/badge/tests-113_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Songs](https://img.shields.io/badge/songs-10_built--in-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 [![Genres](https://img.shields.io/badge/genres-10-purple)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 
 ## ¿Qué es esto?
@@ -25,6 +26,17 @@ Una biblioteca TypeScript de canciones para piano en un formato híbrido de tres
 3. **Listo para código** — datos de notas compás por compás para reproducción MIDI o análisis
 
 Un LLM puede leer el bloque `musicalLanguage` para explicar una canción a un estudiante, y luego usar el array `measures` para reproducción MIDI o generación de ejercicios.
+
+### Pipeline de ingesta MIDI
+
+Ampliar la biblioteca ahora es trivial:
+
+1. Coloca un archivo `.mid` en `songs/raw/`
+2. Escribe una configuración JSON breve en `songs/config/` (metadatos + lenguaje musical)
+3. Ejecuta `pnpm build:songs`
+4. El convertidor extrae notas, divide compases, separa manos, detecta acordes y produce una `SongEntry` completa
+
+El archivo MIDI es la fuente de verdad para notas y tiempos. Los humanos solo escriben la capa de alto valor para LLM.
 
 ## Instalación
 
@@ -60,7 +72,25 @@ const arpeggioSongs = searchSongs({ query: "arpeggios" });
 const easyBlues = searchSongs({ genre: "blues", difficulty: "beginner" });
 ```
 
-## Biblioteca de canciones (10 canciones, 10 géneros)
+### Conversión MIDI → SongEntry
+
+```typescript
+import { readFileSync } from "node:fs";
+import { midiToSongEntry, SongConfigSchema } from "@mcptoolshop/ai-music-sheets";
+
+// Leer archivo MIDI
+const midi = new Uint8Array(readFileSync("songs/raw/autumn-leaves.mid"));
+
+// Leer y validar configuración
+const rawConfig = JSON.parse(readFileSync("songs/config/autumn-leaves.json", "utf8"));
+const config = SongConfigSchema.parse(rawConfig);
+
+// Convertir
+const entry = midiToSongEntry(midi, config);
+console.log(`${entry.title}: ${entry.measures.length} measures`);
+```
+
+## Biblioteca de canciones (10 canciones integradas, 10 géneros)
 
 | Género | Canción | Compositor | Dificultad | Compases |
 |--------|---------|------------|------------|----------|
@@ -118,13 +148,16 @@ Las notas usan notación científica de altura con duración en línea:
 | Símbolo | Duración | Ejemplo |
 |---------|----------|---------|
 | `:w` | Redonda | `C4:w` |
+| `:h.` | Blanca con puntillo | `E4:h.` |
 | `:h` | Blanca | `E4:h` |
+| `:q.` | Negra con puntillo | `G4:q.` |
 | `:q` | Negra | `G4:q` |
+| `:e.` | Corchea con puntillo | `A4:e.` |
 | `:e` | Corchea | `A4:e` |
 | `:s` | Semicorchea | `B4:s` |
 | `R` | Silencio | `R:h` |
 
-Los acordes se separan con espacios: `"C4:q E4:q G4:q"`
+Los acordes se separan con espacios: `"C4 E4 G4:q"`
 
 ## API del registro
 
@@ -152,24 +185,94 @@ registerSong(song: SongEntry): void
 registerSongs(songs: SongEntry[]): void
 ```
 
+## API de ingesta MIDI
+
+```typescript
+// Convertir buffer MIDI + configuración → SongEntry
+midiToSongEntry(midiBuffer: Uint8Array, config: SongConfig): SongEntry
+
+// Convertir número de nota MIDI → notación científica
+midiNoteToScientific(noteNumber: number): string
+// 60 → "C4", 69 → "A4", 108 → "C8"
+
+// Validar una configuración de canción
+validateConfig(config: unknown): ConfigError[]
+
+// Esquemas Zod para validación en tiempo de ejecución
+SongConfigSchema    // configuración completa de canción
+MusicalLanguageSchema
+MeasureOverrideSchema
+```
+
 ## Añadir canciones
+
+### Desde MIDI (recomendado)
+
+1. Coloca el archivo `.mid` en `songs/raw/<slug>.mid`
+2. Escribe la configuración en `songs/config/<slug>.json`:
+
+```json
+{
+  "id": "autumn-leaves",
+  "title": "Autumn Leaves",
+  "genre": "jazz",
+  "composer": "Joseph Kosma",
+  "difficulty": "intermediate",
+  "key": "G major",
+  "tags": ["jazz-standard", "chord-changes"],
+  "musicalLanguage": {
+    "description": "The quintessential jazz standard...",
+    "structure": "AABA",
+    "keyMoments": ["m1: Opening ii-V-I progression"],
+    "teachingGoals": ["Learn ii-V-I voice leading"],
+    "styleTips": ["Swing eighths, gentle touch"]
+  }
+}
+```
+
+3. Ejecuta `pnpm build:songs` — genera TypeScript en `songs/generated/`
+4. Ejecuta `pnpm test` — la validación detecta datos incorrectos automáticamente
+
+### Manual (método heredado)
 
 1. Crear `src/songs/<genre>/<slug>.ts`
 2. Exportar un objeto `SongEntry`
 3. Importar y añadir en `src/songs/index.ts`
-4. Ejecutar `pnpm test` — la validación detecta datos incorrectos automáticamente
+4. Ejecutar `pnpm test`
+
+## Arquitectura
+
+```
+songs/
+├── raw/              archivos .mid (fuente de verdad para notas)
+├── config/           configuraciones .json (metadatos de autoría humana)
+└── generated/        archivos .ts (objetos SongEntry generados automáticamente)
+
+src/
+├── config/
+│   └── schema.ts     Esquemas Zod + validación
+├── midi/
+│   └── ingest.ts     Convertidor MIDI → SongEntry
+├── registry/
+│   └── index.ts      Búsqueda, consulta y validación de canciones
+├── songs/
+│   └── *.ts          10 canciones de demostración integradas
+├── types.ts          Tipos principales (SongEntry, Measure, etc.)
+└── index.ts          Exportaciones de barril
+```
 
 ## Relacionado
 
-- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — Servidor MCP + CLI que carga esta biblioteca, reproduce canciones a través de VMPK vía MIDI y proporciona una experiencia de enseñanza en vivo con retroalimentación por voz.
+- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — Reproductor de piano con motor de audio integrado. Servidor MCP + CLI que carga esta biblioteca y reproduce canciones a través de los altavoces con canto y retroalimentación de enseñanza en vivo.
 
 ## Desarrollo
 
 ```bash
 pnpm install
-pnpm test          # 34 pruebas
+pnpm test          # 113 pruebas
 pnpm typecheck     # tsc --noEmit
 pnpm build         # compilar a dist/
+pnpm build:songs   # generador MIDI → SongEntry
 ```
 
 ## Licencia

@@ -3,17 +3,18 @@
 </p>
 
 <p align="center">
-  <img src="logo.svg" alt="PianoAI logo" width="180" />
+  <img src="logo.svg" alt="ai-music-sheets logo" width="180" />
 </p>
 
 <h1 align="center">ai-music-sheets</h1>
 
 <p align="center">
-  Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from.
+  Piano sheet music in hybrid JSON + musical-language format — built for LLMs to read, reason about, and teach from.<br/>
+  Now with a MIDI ingest pipeline: drop a <code>.mid</code> file + write a config → get a complete SongEntry.
 </p>
 
-[![Tests](https://img.shields.io/badge/tests-34_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
-[![Songs](https://img.shields.io/badge/songs-10-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Tests](https://img.shields.io/badge/tests-113_passing-brightgreen)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
+[![Songs](https://img.shields.io/badge/songs-10_built--in-blue)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 [![Genres](https://img.shields.io/badge/genres-10-purple)](https://github.com/mcp-tool-shop-org/ai-music-sheets)
 
 ## What is this?
@@ -25,6 +26,17 @@ A TypeScript library of piano songs in a three-layer hybrid format:
 3. **Code-ready** — measure-by-measure note data for MIDI playback or analysis
 
 An LLM can read the `musicalLanguage` block to explain a song to a student, then use the `measures` array to drive MIDI playback or generate exercises.
+
+### MIDI Ingest Pipeline
+
+Growing the library is now trivial:
+
+1. Drop a `.mid` file in `songs/raw/`
+2. Write a short JSON config in `songs/config/` (metadata + musical language)
+3. Run `pnpm build:songs`
+4. The converter extracts notes, slices measures, separates hands, detects chords, and produces a complete `SongEntry`
+
+The MIDI file is the source of truth for notes and timing. Humans only write the high-value LLM layer.
 
 ## Install
 
@@ -60,7 +72,25 @@ const arpeggioSongs = searchSongs({ query: "arpeggios" });
 const easyBlues = searchSongs({ genre: "blues", difficulty: "beginner" });
 ```
 
-## Song Library (10 songs, 10 genres)
+### MIDI → SongEntry Conversion
+
+```typescript
+import { readFileSync } from "node:fs";
+import { midiToSongEntry, SongConfigSchema } from "@mcptoolshop/ai-music-sheets";
+
+// Read MIDI file
+const midi = new Uint8Array(readFileSync("songs/raw/autumn-leaves.mid"));
+
+// Read + validate config
+const rawConfig = JSON.parse(readFileSync("songs/config/autumn-leaves.json", "utf8"));
+const config = SongConfigSchema.parse(rawConfig);
+
+// Convert
+const entry = midiToSongEntry(midi, config);
+console.log(`${entry.title}: ${entry.measures.length} measures`);
+```
+
+## Song Library (10 built-in songs, 10 genres)
 
 | Genre | Song | Composer | Difficulty | Measures |
 |-------|------|----------|------------|----------|
@@ -118,13 +148,16 @@ Notes use scientific pitch notation with inline duration:
 | Symbol | Duration | Example |
 |--------|----------|---------|
 | `:w` | Whole note | `C4:w` |
+| `:h.` | Dotted half | `E4:h.` |
 | `:h` | Half note | `E4:h` |
+| `:q.` | Dotted quarter | `G4:q.` |
 | `:q` | Quarter note | `G4:q` |
+| `:e.` | Dotted eighth | `A4:e.` |
 | `:e` | Eighth note | `A4:e` |
 | `:s` | Sixteenth note | `B4:s` |
 | `R` | Rest | `R:h` |
 
-Chords are space-separated: `"C4:q E4:q G4:q"`
+Chords are space-separated: `"C4 E4 G4:q"`
 
 ## Registry API
 
@@ -152,24 +185,94 @@ registerSong(song: SongEntry): void
 registerSongs(songs: SongEntry[]): void
 ```
 
+## MIDI Ingest API
+
+```typescript
+// Convert MIDI buffer + config → SongEntry
+midiToSongEntry(midiBuffer: Uint8Array, config: SongConfig): SongEntry
+
+// Convert MIDI note number → scientific pitch
+midiNoteToScientific(noteNumber: number): string
+// 60 → "C4", 69 → "A4", 108 → "C8"
+
+// Validate a song config
+validateConfig(config: unknown): ConfigError[]
+
+// Zod schemas for runtime validation
+SongConfigSchema    // full song config
+MusicalLanguageSchema
+MeasureOverrideSchema
+```
+
 ## Adding Songs
+
+### From MIDI (recommended)
+
+1. Place `.mid` file in `songs/raw/<slug>.mid`
+2. Write config in `songs/config/<slug>.json`:
+
+```json
+{
+  "id": "autumn-leaves",
+  "title": "Autumn Leaves",
+  "genre": "jazz",
+  "composer": "Joseph Kosma",
+  "difficulty": "intermediate",
+  "key": "G major",
+  "tags": ["jazz-standard", "chord-changes"],
+  "musicalLanguage": {
+    "description": "The quintessential jazz standard...",
+    "structure": "AABA",
+    "keyMoments": ["m1: Opening ii-V-I progression"],
+    "teachingGoals": ["Learn ii-V-I voice leading"],
+    "styleTips": ["Swing eighths, gentle touch"]
+  }
+}
+```
+
+3. Run `pnpm build:songs` — generates TypeScript in `songs/generated/`
+4. Run `pnpm test` — validation catches bad data automatically
+
+### Manual (legacy)
 
 1. Create `src/songs/<genre>/<slug>.ts`
 2. Export a `SongEntry` object
 3. Import and add to `src/songs/index.ts`
-4. Run `pnpm test` — validation catches bad data automatically
+4. Run `pnpm test`
+
+## Architecture
+
+```
+songs/
+├── raw/              .mid files (source of truth for notes)
+├── config/           .json configs (human-authored metadata)
+└── generated/        .ts files (auto-generated SongEntry objects)
+
+src/
+├── config/
+│   └── schema.ts     Zod schemas + validation
+├── midi/
+│   └── ingest.ts     MIDI → SongEntry converter
+├── registry/
+│   └── index.ts      Song lookup, search, validation
+├── songs/
+│   └── *.ts          10 built-in demo songs
+├── types.ts          Core types (SongEntry, Measure, etc.)
+└── index.ts          Barrel exports
+```
 
 ## Related
 
-- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — MCP server + CLI that loads this library, plays songs through VMPK via MIDI, and provides a living teaching experience with voice feedback.
+- **[PianoAI](https://github.com/mcp-tool-shop-org/pianoai)** — Piano player with built-in audio engine. MCP server + CLI that loads this library and plays songs through speakers with singing and live teaching feedback.
 
 ## Development
 
 ```bash
 pnpm install
-pnpm test          # 34 tests
+pnpm test          # 113 tests
 pnpm typecheck     # tsc --noEmit
 pnpm build         # compile to dist/
+pnpm build:songs   # MIDI → SongEntry generator
 ```
 
 ## License
