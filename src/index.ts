@@ -45,6 +45,29 @@ export {
 // Re-export MIDI ingest pipeline
 export { midiToSongEntry, midiNoteToScientific } from "./midi/ingest.js";
 
+// Re-export MIDI modules
+export {
+  separateHands,
+  groupIntoChords,
+  isChord,
+  formatNote,
+  formatHand,
+  chordToString,
+  ticksToDuration,
+} from "./midi/hands.js";
+export type { HandSplit } from "./midi/hands.js";
+
+export {
+  ticksPerMeasure,
+  computeTotalMeasures,
+  sliceIntoMeasures,
+  parseTimeSignature,
+  resolveTimeSignature,
+} from "./midi/measures.js";
+export type { MeasureBucket } from "./midi/measures.js";
+
+export type { ResolvedNote, TempoEvent, TimeSigEvent } from "./midi/types.js";
+
 // Re-export config schema + validation
 export {
   SongConfigSchema,
