@@ -109,7 +109,7 @@ export function ticksToDuration(ticks: number, ticksPerBeat: number): string {
   if (Math.abs(ratio - 1.5) < 0.15) return "q.";    // dotted quarter
   if (Math.abs(ratio - 4 / 3) < 0.1) return "ht";   // half triplet
   if (Math.abs(ratio - 1) < 0.15) return "q";       // quarter
-  if (Math.abs(ratio - 0.75) < 0.1) return "e.";    // dotted eighth
+  if (Math.abs(ratio - 0.75) < 0.05) return "e.";    // dotted eighth (tight)
   if (Math.abs(ratio - 2 / 3) < 0.08) return "qt";  // quarter triplet
   if (Math.abs(ratio - 0.5) < 0.1) return "e";      // eighth
   if (Math.abs(ratio - 1 / 3) < 0.06) return "et";  // eighth triplet
