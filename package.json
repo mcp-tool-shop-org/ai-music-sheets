@@ -22,7 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "registry:validate": "node --import tsx src/registry/validate-cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:songs": "node --import tsx scripts/build-songs.ts"
   },
   "keywords": [
     "piano",
