@@ -42,10 +42,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm run lint --if-present
+        run: pnpm run --if-present lint
 
       - name: Test
-        run: pnpm test --if-present
+        run: pnpm run --if-present test
 
       - name: Build
-        run: pnpm run build --if-present
+        run: pnpm run --if-present build
